@@ -28,11 +28,24 @@ export default {
     const url = new URL(request.url);
     const builder = UPSTREAM[url.pathname];
 
+    /* ── CORS preflight ── */
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "access-control-allow-origin":  "*",
+          "access-control-allow-methods": "GET, POST, OPTIONS",
+          "access-control-allow-headers": "Content-Type, Authorization",
+        },
+      });
+    }
+
     /* ── API proxy ── */
     if (builder) {
       const targetUrl = builder(url.searchParams);
       try {
         const upstream = await fetch(targetUrl, {
+          method: request.method,
           headers: {
             accept:       "application/json",
             "user-agent": "Mozilla/5.0 (compatible; reku-orderbook-dashboard/2.0)",
@@ -56,8 +69,7 @@ export default {
       }
     }
 
-    /* ── Static assets served by Cloudflare Pages automatically ── */
-    // For non-API paths, let Cloudflare Pages serve the static files.
+    /* ── Static assets ── */
     return env.ASSETS.fetch(request);
   },
 };
